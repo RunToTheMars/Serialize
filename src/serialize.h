@@ -9,7 +9,7 @@ enum class format_t
 };
 
 template <typename T>
-int write (const T& val, const std::string &path, format_t format = format_t::binary)
+int write (T& val, const std::string &path, format_t format = format_t::binary)
 {
   if (format == format_t::binary)
     return write_binary (val, path);
@@ -18,7 +18,7 @@ int write (const T& val, const std::string &path, format_t format = format_t::bi
 }
 
 template <typename T>
-bool read (T& val, const std::string &path, format_t format = format_t::binary)
+int read (T& val, const std::string &path, format_t format = format_t::binary)
 {  
   if (format == format_t::binary)
     return read_binary (val, path);

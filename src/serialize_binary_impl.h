@@ -2,65 +2,37 @@
 #define SERIALIZE_BINARY_IMPL_H
 
 #include "serialize_binary_type_traits.h"
+#include "serialize_list.h"
 #include <iostream>
 #include <fstream>
 #include <string>
 
 //-------------------------------------------------------------------------
-/// supported struct
-///
-//template<typename T>
-//requires requires (T val, parameters_list pl) { val.build_parameter_list (pl); }
-//bool write_binary_impl (T &/*val*/, std::ostream &/*os*/, int /*depth*/)
-//{
-////  parameters_list pl;
-////  val.build_parameter_list (pl);
-////  return pl.write (os);
-//}
-
-//template<typename T>
-//requires requires (T val, parameters_list pl) { val.build_parameter_list (pl); }
-//bool read_binary_impl (T &/*val*/, std::istream &/*is*/, int /*depth*/)
-//{
-////  parameters_list pl;
-////  val.build_parameter_list (pl);
-////  return pl.read (is);
-//}
-
-//template<typename T>
-//requires requires (T val, parameters_list pl) { val.build_parameter_list (pl); }
-//bool bytes_count_impl (const T &val, std::ostream &os)
-//{
-////  parameters_list pl;
-////  val.build_parameter_list (pl);
-////  return pl.write (os);
-//}
-
-//-------------------------------------------------------------------------
 /// boolean
 ///
+
 template<typename T, typename std::enable_if<is_boolean<T>::value, int>::type = 0>
-bool write_binary_impl (const T &val, std::ostream &os)
+size_t __bytes_count (const T &/*val*/)
 {
-  size_t bytes_to_write = bytes_count_impl (val);
+  return sizeof (char);
+}
+
+template<typename T, typename std::enable_if<is_boolean<T>::value, int>::type = 0>
+bool __write_binary (const T &val, std::ostream &os)
+{
+  size_t bytes_to_write = __bytes_count (val);
   char ch = (val) ? 1 : 0;
   return (bool) os.write (&ch, bytes_to_write);
 }
 
 template<typename T, typename std::enable_if<is_boolean<T>::value, int>::type = 0>
-bool read_binary_impl (T &val, std::istream &is)
+bool __read_binary (T &val, std::istream &is)
 {
-  size_t bytes_to_write = bytes_count_impl (val);
+  size_t bytes_to_write = __bytes_count (val);
   char ch;
   bool r = (bool) is.read (&ch, bytes_to_write);
   val = ch == 1;
   return r;
-}
-
-template<typename T, typename std::enable_if<is_boolean<T>::value, int>::type = 0>
-size_t bytes_count_impl (const T &/*val*/)
-{
-  return sizeof (char);
 }
 
 //-------------------------------------------------------------------------
@@ -68,24 +40,24 @@ size_t bytes_count_impl (const T &/*val*/)
 ///
 
 template<typename T, typename std::enable_if<is_simple<T>::value, int>::type = 0>
-size_t bytes_count_impl (const T &/*val*/)
+size_t __bytes_count (const T &/*val*/)
 {
   return sizeof (T);
 }
 
 template<typename T, typename std::enable_if<is_simple<T>::value, int>::type = 0>
-bool write_binary_impl (const T &val, std::ostream &os)
+bool __write_binary (const T &val, std::ostream &os)
 {
-  size_t bytes_to_write = bytes_count_impl (val);
+  size_t bytes_to_write = __bytes_count (val);
   const char *ptr = reinterpret_cast<const char *> (&val);
 
   return (bool) os.write (ptr, bytes_to_write);
 }
 
 template<typename T, typename std::enable_if<is_simple<T>::value, int>::type = 0>
-bool read_binary_impl (T &val, std::istream &is)
+bool __read_binary (T &val, std::istream &is)
 {
-  size_t bytes_to_write = bytes_count_impl (val);
+  size_t bytes_to_write = __bytes_count (val);
   char *ptr = reinterpret_cast<char *> (&val);
 
   return (bool) is.read (ptr, bytes_to_write);
@@ -96,27 +68,27 @@ bool read_binary_impl (T &val, std::istream &is)
 ///
 
 template<typename T, typename std::enable_if<is_string<T>::value, int>::type = 0>
-size_t bytes_count_impl (const T &val)
+size_t __bytes_count (const T &val)
 {
   size_t size = val.size ();
-  return bytes_count_impl (size) + size;
+  return __bytes_count (size) + size;
 }
 
 template<typename T, typename std::enable_if<is_string<T>::value, int>::type = 0>
-bool write_binary_impl (const T &val, std::ostream &os)
+bool __write_binary (const T &val, std::ostream &os)
 {
   size_t bytes_to_write = val.size ();
   const char *ptr = val.c_str ();
 
-  return write_binary_impl (bytes_to_write, os) && os.write (ptr, bytes_to_write);
+  return __write_binary (bytes_to_write, os) && os.write (ptr, bytes_to_write);
 }
 
 template<typename T, typename std::enable_if<is_string<T>::value, int>::type = 0>
-bool read_binary_impl (T &val, std::istream &is)
+bool __read_binary (T &val, std::istream &is)
 {
   size_t bytes_to_load = val.size ();
 
-  if (!read_binary_impl (bytes_to_load, is))
+  if (!__read_binary (bytes_to_load, is))
       return false;
 
   val.resize (bytes_to_load);
@@ -132,26 +104,26 @@ bool read_binary_impl (T &val, std::istream &is)
 
 template<typename T>
 requires requires (T val) { enum_to_string (val); }
-size_t bytes_count_impl (const T &val)
+size_t __bytes_count (const T &val)
 {
   std::string string = enum_to_string (val);
-  return bytes_count_impl (string);
+  return __bytes_count (string);
 }
 
 template<typename T>
 requires requires (T val) { enum_to_string (val); }
-bool write_binary_impl (const T &val, std::ostream &os)
+bool __write_binary (const T &val, std::ostream &os)
 {
   std::string string = enum_to_string (val);
-  return write_binary_impl (string, os);
+  return __write_binary (string, os);
 }
 
 template<typename T>
 requires requires (T val) { enum_to_string (val); }
-bool read_binary_impl (T &val, std::istream &is)
+bool __read_binary (T &val, std::istream &is)
 {
   std::string string;
-  read_binary_impl (string, is);
+  __read_binary (string, is);
 
   for (int i = 0; i < (int) T::COUNT; i++)
     {
@@ -170,12 +142,12 @@ bool read_binary_impl (T &val, std::istream &is)
 ///
 
 template<typename T, typename std::enable_if<is_vector<T>::value, int>::type = 0>
-size_t bytes_count_impl (const T &val)
+size_t __bytes_count (T &val)
 {
   size_t res = 0;
   size_t size = val.size ();
 
-  res += bytes_count_impl (size);
+  res += __bytes_count (size);
 
   if (size == 0)
     return res;
@@ -187,17 +159,17 @@ size_t bytes_count_impl (const T &val)
   else
     {
       for (size_t i = 0; i < size; i++)
-        res += bytes_count_impl (val[i]);
+        res += __bytes_count (val[i]);
     }
 
   return res;
 }
 
 template<typename T, typename std::enable_if<is_vector<T>::value, int>::type = 0>
-bool write_binary_impl (const T &val, std::ostream &os)
+bool __write_binary (T &val, std::ostream &os)
 {
   size_t size = val.size ();
-  if (!write_binary_impl (size, os))
+  if (!__write_binary (size, os))
     return false;
 
   if (size == 0)
@@ -214,7 +186,7 @@ bool write_binary_impl (const T &val, std::ostream &os)
     {
       for (size_t i = 0; i < size; i++)
         {
-          if (!write_binary_impl (val[i], os))
+          if (!__write_binary (val[i], os))
             return false;
         }
     }
@@ -223,39 +195,128 @@ bool write_binary_impl (const T &val, std::ostream &os)
 }
 
 template<typename T, typename std::enable_if<is_vector<T>::value, int>::type = 0>
-bool read_binary_impl (T &val, std::istream &is)
+bool __read_binary (T &val, std::istream &is)
 {
-    size_t size;
-    if (!read_binary_impl (size, is))
-        return false;
+  size_t size;
+  if (!__read_binary (size, is))
+    return false;
 
-    val.resize (size);
-    if (size == 0)
-        return true;
+  val.resize (size);
+  if (size == 0)
+    return true;
 
-    if (is_simple<typename T::value_type>::value)
+  if (is_simple<typename T::value_type>::value)
     {
-        size_t bytes_to_read = sizeof (typename T::value_type) * size;
-        char *ptr = reinterpret_cast<char *> (&val[0]);
+      size_t bytes_to_read = sizeof (typename T::value_type) * size;
+      char *ptr = reinterpret_cast<char *> (&val[0]);
 
-        return (bool) is.read (ptr, bytes_to_read);
+      return (bool) is.read (ptr, bytes_to_read);
     }
-    else
+  else
     {
-        for (size_t i = 0; i < size; i++)
+      for (size_t i = 0; i < size; i++)
         {
-            if (!read_binary_impl (val[i], is))
-                return false;
+          val[i] = {};
+          if (!__read_binary (val[i], is))
+            return false;
         }
     }
 
-    return true;
+  return true;
+}
+
+//-------------------------------------------------------------------------
+// supported struct
+//
+
+template <typename T>
+int value_parameter<T>::write_binary (std::ostream &os)
+{
+  return __write_binary (m_val, os);
+}
+
+template <typename T>
+int value_parameter<T>::read_binary (std::istream &is)
+{
+  int r = __read_binary (m_val, is);
+  if (m_do_after_read)
+    m_do_after_read ();
+  return r;
+}
+
+template <typename T>
+size_t value_parameter<T>::bytes_count ()
+{
+  return __bytes_count (m_val);
+}
+
+
+template<typename T>
+requires requires (T val, serialize_list pl) { val.build_parameter_list (pl); }
+bool __write_binary (T &val, std::ostream &os)
+{
+  serialize_list pl;
+  val.build_parameter_list (pl);
+
+  for (auto &[name, param]: pl.get_list ())
+    {
+      const std::string &name_test = name;
+      __write_binary (name_test, os);
+      int r = param->write_binary (os);
+      if (r < 0)
+        return false;
+    }
+
+  return true;
+}
+
+template<typename T>
+requires requires (T val, serialize_list pl) { val.build_parameter_list (pl); }
+bool __read_binary (T &val, std::istream &is)
+{
+  serialize_list pl;
+  val.build_parameter_list (pl);
+
+  for (auto &[name, param]: pl.get_list ())
+    {
+      std::string name_in_stream;
+      bool r = __read_binary (name_in_stream, is);
+      if (!r)
+        return false;
+
+      if (name_in_stream != name)
+        {
+          is.seekg (-(std::streamoff) __bytes_count (name_in_stream), std::ios_base::cur);
+        }
+      else
+        {
+          param->read_binary (is);
+        }
+    }
+
+  pl.do_after_read ();
+
+  return true;
+}
+
+template<typename T>
+requires requires (T val, serialize_list pl) { val.build_parameter_list (pl); }
+size_t __bytes_count (T &val)
+{
+  serialize_list pl;
+  val.build_parameter_list (pl);
+
+  size_t res = 0;
+  for (const auto &[name, param]: pl.get_list ())
+    res += param->bytes_count ();
+
+  return res;
 }
 
 //-------------------------------------------------------------------------
 
 template <typename T>
-int write_binary (const T& val, const std::string &path)
+int write_binary (T& val, const std::string &path)
 {
   std::ofstream outfile;
 
@@ -264,7 +325,8 @@ int write_binary (const T& val, const std::string &path)
   if (!outfile)
     return -1;
 
-  int r = write_binary_impl (val, outfile);
+  int r = 0;
+  __write_binary (val, outfile);
 
   outfile.close ();
   return r;
@@ -280,7 +342,8 @@ bool read_binary (T& val, const std::string &path)
   if (!infile)
     return -1;
 
-  int r = read_binary_impl (val, infile);
+  int r = 0;
+  __read_binary (val, infile);
 
   infile.close ();
   return r;

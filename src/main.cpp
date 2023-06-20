@@ -1,7 +1,24 @@
 #include "serialize.h"
 
+struct example_1
+{
+  int m_age;
+  std::string m_name;
+
+  example_1 (): example_1 (0, "") {}
+  example_1 (int age, std::string name) { m_age = age; m_name = name; }
+
+  void build_parameter_list (serialize_list &pl)
+  {
+    pl.add ("age", m_age);
+    pl.add ("name", m_name);
+  }
+
+  bool operator == (const example_1 &rhs) const { return m_age == rhs.m_age && m_name == rhs.m_name; }
+};
+
 template <typename T>
-int make_test (const T &val, std::string path)
+int make_test (T val, std::string path)
 {
   int r = write (val, path);
   if (r < 0)
@@ -39,6 +56,9 @@ int main ()
     return -1;
 
   if (make_test (std::vector<std::string> {"I", "Don't", "Love", "C++"}, "vec_string.txt") < 0)
+    return -1;
+
+  if (make_test (example_1 (25, "Stanislav"), "example_string.txt") < 0)
     return -1;
 
   return 0;
