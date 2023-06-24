@@ -22,6 +22,9 @@ template <typename T>
 struct is_simple : std::false_type {};
 
 template <>
+struct is_simple<char> : std::true_type {};
+
+template <>
 struct is_simple<int> : std::true_type {};
 
 template <>
@@ -29,6 +32,9 @@ struct is_simple<unsigned int> : std::true_type {};
 
 template <>
 struct is_simple<size_t> : std::true_type {};
+
+template <>
+struct is_simple<float> : std::true_type {};
 
 template <>
 struct is_simple<double> : std::true_type {};

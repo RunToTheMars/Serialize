@@ -250,7 +250,6 @@ size_t value_parameter<T>::bytes_count ()
   return __bytes_count (m_val);
 }
 
-
 template<typename T>
 requires requires (T val, serialize_list pl) { val.build_parameter_list (pl); }
 bool __write_binary (T &val, std::ostream &os)
@@ -308,7 +307,10 @@ size_t __bytes_count (T &val)
 
   size_t res = 0;
   for (const auto &[name, param]: pl.get_list ())
-    res += param->bytes_count ();
+    {
+      res += __bytes_count (name);
+      res += param->bytes_count ();
+    }
 
   return res;
 }
@@ -347,6 +349,12 @@ bool read_binary (T& val, const std::string &path)
 
   infile.close ();
   return r;
+}
+
+template <typename T>
+size_t bytes_count (T& val)
+{
+  return __bytes_count (val);
 }
 
 
