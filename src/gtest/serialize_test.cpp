@@ -89,6 +89,14 @@ TEST (serialize_test, make_save_load_identity_test)
     }
 
     make_save_load_identity_test (std::vector<std::string> {"I", "Don't", "Love", "C++"}, "vec_string.txt", current_dir);
+
+    {
+      std::map<int, double> m;
+      m[0] = 1.;
+      m[1] = 1.5;
+      make_save_load_identity_test (m, "map_int_double.txt", current_dir);
+    }
+
   }
 
   /// custom types

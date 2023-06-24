@@ -226,6 +226,73 @@ bool __read_binary (T &val, std::istream &is)
 }
 
 //-------------------------------------------------------------------------
+/// map
+///
+
+template<typename T, typename std::enable_if<is_map<T>::value, int>::type = 0>
+size_t __bytes_count (T &val)
+{
+  size_t res = 0;
+  size_t size = val.size ();
+
+  res += __bytes_count (size);
+
+  for (const auto &[k, v]: val)
+    {
+      res += __bytes_count (k);
+      res += __bytes_count (v);
+    }
+
+  return res;
+}
+
+template<typename T, typename std::enable_if<is_map<T>::value, int>::type = 0>
+bool __write_binary (T &val, std::ostream &os)
+{
+  size_t size = val.size ();
+  if (!__write_binary (size, os))
+    return false;
+
+  for (const auto &[k, v]: val)
+    {
+      if (!__write_binary (k, os))
+        return false;
+
+      if (!__write_binary (v, os))
+        return false;
+    }
+
+  return true;
+}
+
+template<typename T, typename std::enable_if<is_map<T>::value, int>::type = 0>
+bool __read_binary (T &val, std::istream &is)
+{
+  size_t size;
+  if (!__read_binary (size, is))
+    return false;
+
+  bool r = true;
+  for (size_t i = 0; i < size; i++)
+    {
+      typename T::key_type k;
+      typename T::mapped_type  v;
+
+      bool has_error = __read_binary (k, is);
+      if (has_error)
+        r = false;
+
+      has_error = __read_binary (v, is);
+      if (has_error)
+        r = false;
+
+      val.insert ({k, v});
+    }
+
+  return r;
+}
+
+//-------------------------------------------------------------------------
 // supported struct
 //
 
