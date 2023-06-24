@@ -1,5 +1,5 @@
-#ifndef SERIALIZE_BINARY_TYPE_TRAITS_H
-#define SERIALIZE_BINARY_TYPE_TRAITS_H
+#ifndef SERIALIZE_TYPE_TRAITS_H
+#define SERIALIZE_TYPE_TRAITS_H
 
 #include <type_traits>
 #include <vector>
@@ -76,4 +76,4 @@ struct is_set : std::false_type {};
 template <typename T>
 struct is_set<std::set<T>> : std::true_type {};
 
-#endif // SERIALIZE_BINARY_TYPE_TRAITS_H
+#endif // SERIALIZE_TYPE_TRAITS_H

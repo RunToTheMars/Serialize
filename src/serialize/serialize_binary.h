@@ -1,7 +1,7 @@
 #ifndef SERIALIZE_BINARY_H
 #define SERIALIZE_BINARY_H
 
-#include "serialize_binary_type_traits.h"
+#include "serialize_type_traits.h"
 #include "serialize_list.h"
 #include <iostream>
 #include <fstream>
