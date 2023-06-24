@@ -50,6 +50,15 @@ struct is_string : std::false_type {};
 
 template <>
 struct is_string<std::string> : std::true_type {};
+
+//-------------------------------------------------------------------------
+/// is_vector
+///
+template <typename T>
+struct is_vector : std::false_type {};
+
+template <typename T>
+struct is_vector<std::vector<T>> : std::true_type {};
 }
 
 #endif // SERIALIZE_TEXT_TYPE_TRAITS_H

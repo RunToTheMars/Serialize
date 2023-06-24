@@ -92,11 +92,6 @@ TEST (serialize_test, make_save_load_identity_test)
 
     make_save_load_identity_test_bin_text (std::string ("TEST WORD"),     "string.txt", current_dir);
     make_save_load_identity_test_bin_text (std::string ("Проверка") , "rus_string.txt", current_dir);
-
-    make_save_load_identity_test (std::vector<int>    {1, 2, 3, 4, 5}     ,    "vec_int.txt", current_dir);
-    make_save_load_identity_test (std::vector<double> {1., 2., 3., 4., 5.}, "vec_double.txt", current_dir);
-
-    make_save_load_identity_test (std::vector<std::string> {"I", "Don't", "Love", "C++"}, "vec_string.txt", current_dir);
   }
 
   /// composite types
@@ -104,17 +99,17 @@ TEST (serialize_test, make_save_load_identity_test)
     std::string current_dir = test_dir + "/" + "composite_types";
     std::filesystem::create_directories (current_dir);
 
-    make_save_load_identity_test (std::vector<int>    {1, 2, 3, 4, 5}     ,    "vec_int.txt", current_dir);
-    make_save_load_identity_test (std::vector<double> {1., 2., 3., 4., 5.}, "vec_double.txt", current_dir);
+    make_save_load_identity_test_bin_text (std::vector<int>    {1, 2, 3, 4, 5}     ,    "vec_int.txt", current_dir);
+    make_save_load_identity_test_bin_text (std::vector<double> {1., 2., 3., 4., 5.}, "vec_double.txt", current_dir);
 
     {
       std::vector<int> v1 = {1, 2, 3};
       std::vector<int> v2 = {4, 5, 6};
       std::vector<std::vector<int>> V = {v1, v2};
-      make_save_load_identity_test (V, "vec_vec_int.txt", current_dir);
+      make_save_load_identity_test_bin_text (V, "vec_vec_int.txt", current_dir);
     }
 
-    make_save_load_identity_test (std::vector<std::string> {"I", "Don't", "Love", "C++"}, "vec_string.txt", current_dir);
+    make_save_load_identity_test_bin_text (std::vector<std::string> {"I", "Don't", "Love", "C++"}, "vec_string.txt", current_dir);
 
     {
       std::map<int, double> m;

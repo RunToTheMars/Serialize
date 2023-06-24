@@ -6,6 +6,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <sstream>
 #include <algorithm>
 
 //-------------------------------------------------------------------------
@@ -114,6 +115,88 @@ template<typename T, typename std::enable_if<text::is_string<T>::value, int>::ty
 bool __read_text (T &val, std::istream &is)
 {
   return (bool) std::getline (is, val);
+}
+
+//-------------------------------------------------------------------------
+/// vector
+///
+
+template<typename T, typename std::enable_if<text::is_vector<T>::value, int>::type = 0>
+size_t __depth_count (const T &val)
+{
+  size_t r = 0;
+  for (auto &v: val)
+    {
+      size_t d = __depth_count (v);
+      if (d > r)
+        r = d;
+    }
+
+  return r + 1;
+}
+
+template<typename T, typename std::enable_if<text::is_vector<T>::value, int>::type = 0>
+size_t __lines_count (const T &val)
+{
+  size_t r = 2;
+  for (auto &v: val)
+    r += __lines_count (v);
+
+  return r;
+}
+
+template<typename T, typename std::enable_if<text::is_vector<T>::value, int>::type = 0>
+bool __write_text (const T &val, std::ostream &os)
+{
+  bool r_start = (bool) (os << "[" << "\n");
+
+  bool r_values = true;
+  for (auto &v: val)
+    {
+      if (!__write_text (v, os))
+        r_values = false;
+
+      if (!text::is_vector<typename T::value_type>::value)
+        {
+          if (! (bool) (os << "\n"))
+            r_values = false;
+        }
+    }
+
+  bool r_end = (bool) (os << "]" << "\n");
+  return r_start && r_values && r_end;
+}
+
+template<typename T, typename std::enable_if<text::is_vector<T>::value, int>::type = 0>
+bool __read_text (T &val, std::istream &is)
+{
+  std::string line;
+  bool r_start = (bool) (is >> line);
+
+  if (!r_start || line != "[")
+    return false;
+
+
+  while (true)
+  {
+    line.clear ();
+    if (!__read_text (line, is))
+      return false;
+
+    if (line == "]")
+      return true;
+
+    std::stringstream ss;
+    ss << line;
+    typename T::value_type v;
+
+    if (!__read_text (v, ss))
+      continue;
+
+    val.push_back (v);
+  }
+
+  return false;
 }
 
 //-------------------------------------------------------------------------
