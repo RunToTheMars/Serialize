@@ -1,5 +1,5 @@
-#ifndef SERIALIZE_BINARY_IMPL_H
-#define SERIALIZE_BINARY_IMPL_H
+#ifndef SERIALIZE_BINARY_H
+#define SERIALIZE_BINARY_H
 
 #include "serialize_binary_type_traits.h"
 #include "serialize_list.h"
@@ -481,4 +481,4 @@ size_t bytes_count (T& val)
 }
 
 
-#endif // SERIALIZE_BINARY_IMPL_H
+#endif // SERIALIZE_BINARY_H

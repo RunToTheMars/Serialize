@@ -1,7 +1,7 @@
 #ifndef SERIALIZE_H
 #define SERIALIZE_H
 
-#include "serialize_binary_impl.h"
+#include "serialize_binary.h"
 
 enum class format_t
 {
