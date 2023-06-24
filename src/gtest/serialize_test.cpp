@@ -24,9 +24,9 @@ size_t bytes_count_file (const std::string &path)
 }
 
 template <typename T1, typename T2>
-void make_primitive_test (T1 to_read, T2 from_write, const std::string &filename, const std::string &current_dir)
+void make_primitive_test_binary (T1 to_read, T2 from_write, const std::string &filename, const std::string &current_dir)
 {
-  std::string path = current_dir + "/" + filename;
+  std::string path = current_dir + "/" + "binary_" + filename;
 
   write (to_read, path);
   EXPECT_EQ (bytes_count (to_read), bytes_count_file (path));
@@ -35,6 +35,32 @@ void make_primitive_test (T1 to_read, T2 from_write, const std::string &filename
 
   read (readed_val, path);
   EXPECT_EQ (from_write, readed_val);
+}
+
+template <typename T1, typename T2>
+void make_primitive_test_text (T1 to_read, T2 from_write, const std::string &filename, const std::string &current_dir)
+{
+  std::string path = current_dir + "/" + "text_" + filename;
+
+  write_text (to_read, path);
+
+  T2 readed_val;
+
+  read_text (readed_val, path);
+  EXPECT_EQ (from_write, readed_val);
+}
+
+template <typename T1, typename T2>
+void make_primitive_test (T1 to_read, T2 from_write, const std::string &filename, const std::string &current_dir)
+{
+  make_primitive_test_binary (to_read, from_write, filename, current_dir);
+}
+
+template <typename T>
+void make_save_load_identity_test_bin_text (T val, const std::string &filename, const std::string &current_dir)
+{
+  make_primitive_test_binary (val, val, filename, current_dir);
+  make_primitive_test_text   (val, val, filename, current_dir);
 }
 
 template <typename T>
@@ -53,10 +79,10 @@ TEST (serialize_test, make_save_load_identity_test)
     std::string current_dir = test_dir + "/" + "cpp_standard_types";
     std::filesystem::create_directories (current_dir);
 
-    make_save_load_identity_test (2   ,    "int.txt", current_dir);
-    make_save_load_identity_test (5.  , "double.txt", current_dir);
-    make_save_load_identity_test (true,   "bool.txt", current_dir);
-    make_save_load_identity_test ('c' ,   "char.txt", current_dir);
+    make_save_load_identity_test_bin_text (2   ,    "int.txt", current_dir);
+    make_save_load_identity_test_bin_text (5.  , "double.txt", current_dir);
+    make_save_load_identity_test_bin_text (true,   "bool.txt", current_dir);
+    make_save_load_identity_test_bin_text ('c' ,   "char.txt", current_dir);
   }
 
   /// c++ std types
@@ -64,8 +90,8 @@ TEST (serialize_test, make_save_load_identity_test)
     std::string current_dir = test_dir + "/" + "std_types";
     std::filesystem::create_directories (current_dir);
 
-    make_save_load_identity_test (std::string ("TEST WORD"),     "string.txt", current_dir);
-    make_save_load_identity_test (std::string ("Проверка") , "rus_string.txt", current_dir);
+    make_save_load_identity_test_bin_text (std::string ("TEST WORD"),     "string.txt", current_dir);
+    make_save_load_identity_test_bin_text (std::string ("Проверка") , "rus_string.txt", current_dir);
 
     make_save_load_identity_test (std::vector<int>    {1, 2, 3, 4, 5}     ,    "vec_int.txt", current_dir);
     make_save_load_identity_test (std::vector<double> {1., 2., 3., 4., 5.}, "vec_double.txt", current_dir);
@@ -166,3 +192,40 @@ TEST (serialize_test, add_new_fields_test)
   make_primitive_test (s, student_3 (s_new), "s3.txt", current_dir);
   make_primitive_test (s, student_4 (s_new), "s4.txt", current_dir);
 }
+
+template <typename T>
+void make_invalid_user_string_test (std::string user_string, T expected_val, const std::string &filename, const std::string &current_dir)
+{
+  std::string path = current_dir + "/" + "text_" + filename;
+
+  write_text (user_string, path);
+
+  T readed_val;
+
+  read_text (readed_val, path);
+  EXPECT_EQ (expected_val, readed_val);
+}
+
+TEST (serialize_test, invalid_user_string_test)
+{
+  std::string test_dir = base_dir + "/" + ::testing::UnitTest::GetInstance ()->current_test_info ()->name ();
+  std::filesystem::create_directories (test_dir);
+
+  std::string current_dir = test_dir;
+
+  /// c++ int
+  {
+    make_invalid_user_string_test ("7s", 7, "invalid_int_1.txt", current_dir);
+    make_invalid_user_string_test ("s7", 0, "invalid_int_2.txt", current_dir);
+  }
+
+  /// c++ double
+  {
+    make_invalid_user_string_test ("7.s", 7., "invalid_double_1.txt", current_dir);
+    make_invalid_user_string_test ("s7.", 0., "invalid_double_2.txt", current_dir);
+
+    make_invalid_user_string_test ("7.e8s", 7.e8, "invalid_double_exp_1.txt", current_dir);
+    make_invalid_user_string_test ("s7.e8", 0.  , "invalid_double_exp_2.txt", current_dir);
+  }
+}
+

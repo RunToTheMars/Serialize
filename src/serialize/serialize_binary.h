@@ -1,7 +1,7 @@
 #ifndef SERIALIZE_BINARY_H
 #define SERIALIZE_BINARY_H
 
-#include "serialize_type_traits.h"
+#include "serialize_binary_type_traits.h"
 #include "serialize_list.h"
 #include <iostream>
 #include <fstream>
@@ -11,13 +11,13 @@
 /// boolean
 ///
 
-template<typename T, typename std::enable_if<is_boolean<T>::value, int>::type = 0>
+template<typename T, typename std::enable_if<binary::is_boolean<T>::value, int>::type = 0>
 size_t __bytes_count (const T &/*val*/)
 {
   return sizeof (char);
 }
 
-template<typename T, typename std::enable_if<is_boolean<T>::value, int>::type = 0>
+template<typename T, typename std::enable_if<binary::is_boolean<T>::value, int>::type = 0>
 bool __write_binary (const T &val, std::ostream &os)
 {
   size_t bytes_to_write = __bytes_count (val);
@@ -25,7 +25,7 @@ bool __write_binary (const T &val, std::ostream &os)
   return (bool) os.write (&ch, bytes_to_write);
 }
 
-template<typename T, typename std::enable_if<is_boolean<T>::value, int>::type = 0>
+template<typename T, typename std::enable_if<binary::is_boolean<T>::value, int>::type = 0>
 bool __read_binary (T &val, std::istream &is)
 {
   size_t bytes_to_write = __bytes_count (val);
@@ -39,13 +39,13 @@ bool __read_binary (T &val, std::istream &is)
 /// simple
 ///
 
-template<typename T, typename std::enable_if<is_simple<T>::value, int>::type = 0>
+template<typename T, typename std::enable_if<binary::is_simple<T>::value, int>::type = 0>
 size_t __bytes_count (const T &/*val*/)
 {
   return sizeof (T);
 }
 
-template<typename T, typename std::enable_if<is_simple<T>::value, int>::type = 0>
+template<typename T, typename std::enable_if<binary::is_simple<T>::value, int>::type = 0>
 bool __write_binary (const T &val, std::ostream &os)
 {
   size_t bytes_to_write = __bytes_count (val);
@@ -54,7 +54,7 @@ bool __write_binary (const T &val, std::ostream &os)
   return (bool) os.write (ptr, bytes_to_write);
 }
 
-template<typename T, typename std::enable_if<is_simple<T>::value, int>::type = 0>
+template<typename T, typename std::enable_if<binary::is_simple<T>::value, int>::type = 0>
 bool __read_binary (T &val, std::istream &is)
 {
   size_t bytes_to_write = __bytes_count (val);
@@ -67,14 +67,14 @@ bool __read_binary (T &val, std::istream &is)
 /// string
 ///
 
-template<typename T, typename std::enable_if<is_string<T>::value, int>::type = 0>
+template<typename T, typename std::enable_if<binary::is_string<T>::value, int>::type = 0>
 size_t __bytes_count (const T &val)
 {
   size_t size = val.size ();
   return __bytes_count (size) + size;
 }
 
-template<typename T, typename std::enable_if<is_string<T>::value, int>::type = 0>
+template<typename T, typename std::enable_if<binary::is_string<T>::value, int>::type = 0>
 bool __write_binary (const T &val, std::ostream &os)
 {
   size_t bytes_to_write = val.size ();
@@ -83,7 +83,7 @@ bool __write_binary (const T &val, std::ostream &os)
   return __write_binary (bytes_to_write, os) && os.write (ptr, bytes_to_write);
 }
 
-template<typename T, typename std::enable_if<is_string<T>::value, int>::type = 0>
+template<typename T, typename std::enable_if<binary::is_string<T>::value, int>::type = 0>
 bool __read_binary (T &val, std::istream &is)
 {
   size_t bytes_to_load = val.size ();
@@ -141,7 +141,7 @@ bool __read_binary (T &val, std::istream &is)
 /// vector
 ///
 
-template<typename T, typename std::enable_if<is_vector<T>::value, int>::type = 0>
+template<typename T, typename std::enable_if<binary::is_vector<T>::value, int>::type = 0>
 size_t __bytes_count (T &val)
 {
   size_t res = 0;
@@ -152,7 +152,7 @@ size_t __bytes_count (T &val)
   if (size == 0)
     return res;
 
-  if (is_simple<typename T::value_type>::value)
+  if (binary::is_simple<typename T::value_type>::value)
     {
       res += sizeof (typename T::value_type) * size;
     }
@@ -165,7 +165,7 @@ size_t __bytes_count (T &val)
   return res;
 }
 
-template<typename T, typename std::enable_if<is_vector<T>::value, int>::type = 0>
+template<typename T, typename std::enable_if<binary::is_vector<T>::value, int>::type = 0>
 bool __write_binary (T &val, std::ostream &os)
 {
   size_t size = val.size ();
@@ -175,7 +175,7 @@ bool __write_binary (T &val, std::ostream &os)
   if (size == 0)
     return true;
 
-  if (is_simple<typename T::value_type>::value)
+  if (binary::is_simple<typename T::value_type>::value)
     {
       size_t bytes_to_write = sizeof (typename T::value_type) * size;
       const char *ptr = reinterpret_cast<const char *> (&val[0]);
@@ -194,7 +194,7 @@ bool __write_binary (T &val, std::ostream &os)
   return true;
 }
 
-template<typename T, typename std::enable_if<is_vector<T>::value, int>::type = 0>
+template<typename T, typename std::enable_if<binary::is_vector<T>::value, int>::type = 0>
 bool __read_binary (T &val, std::istream &is)
 {
   size_t size;
@@ -205,7 +205,7 @@ bool __read_binary (T &val, std::istream &is)
   if (size == 0)
     return true;
 
-  if (is_simple<typename T::value_type>::value)
+  if (binary::is_simple<typename T::value_type>::value)
     {
       size_t bytes_to_read = sizeof (typename T::value_type) * size;
       char *ptr = reinterpret_cast<char *> (&val[0]);
@@ -229,7 +229,7 @@ bool __read_binary (T &val, std::istream &is)
 /// map
 ///
 
-template<typename T, typename std::enable_if<is_map<T>::value, int>::type = 0>
+template<typename T, typename std::enable_if<binary::is_map<T>::value, int>::type = 0>
 size_t __bytes_count (T &val)
 {
   size_t res = 0;
@@ -246,7 +246,7 @@ size_t __bytes_count (T &val)
   return res;
 }
 
-template<typename T, typename std::enable_if<is_map<T>::value, int>::type = 0>
+template<typename T, typename std::enable_if<binary::is_map<T>::value, int>::type = 0>
 bool __write_binary (T &val, std::ostream &os)
 {
   size_t size = val.size ();
@@ -265,7 +265,7 @@ bool __write_binary (T &val, std::ostream &os)
   return true;
 }
 
-template<typename T, typename std::enable_if<is_map<T>::value, int>::type = 0>
+template<typename T, typename std::enable_if<binary::is_map<T>::value, int>::type = 0>
 bool __read_binary (T &val, std::istream &is)
 {
   size_t size;
@@ -296,7 +296,7 @@ bool __read_binary (T &val, std::istream &is)
 /// set
 ///
 
-template<typename T, typename std::enable_if<is_set<T>::value, int>::type = 0>
+template<typename T, typename std::enable_if<binary::is_set<T>::value, int>::type = 0>
 size_t __bytes_count (T &val)
 {
   size_t res = 0;
@@ -310,7 +310,7 @@ size_t __bytes_count (T &val)
   return res;
 }
 
-template<typename T, typename std::enable_if<is_set<T>::value, int>::type = 0>
+template<typename T, typename std::enable_if<binary::is_set<T>::value, int>::type = 0>
 bool __write_binary (T &val, std::ostream &os)
 {
   size_t size = val.size ();
@@ -326,7 +326,7 @@ bool __write_binary (T &val, std::ostream &os)
   return true;
 }
 
-template<typename T, typename std::enable_if<is_set<T>::value, int>::type = 0>
+template<typename T, typename std::enable_if<binary::is_set<T>::value, int>::type = 0>
 bool __read_binary (T &val, std::istream &is)
 {
   size_t size;
@@ -462,7 +462,7 @@ bool read_binary (T& val, const std::string &path)
 {
   std::ifstream infile;
 
-  infile.open (path);
+  infile.open (path, std::ofstream::binary);
 
   if (!infile)
     return -1;
