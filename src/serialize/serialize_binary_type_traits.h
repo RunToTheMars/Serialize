@@ -5,7 +5,7 @@
 #include <vector>
 #include <string>
 #include <map>
-#include <memory>
+#include <set>
 
 //-------------------------------------------------------------------------
 /// bool
@@ -66,5 +66,14 @@ struct is_map : std::false_type {};
 
 template <typename Key, typename Val>
 struct is_map<std::map<Key, Val>> : std::true_type {};
+
+//-------------------------------------------------------------------------
+/// set
+///
+template <typename T>
+struct is_set : std::false_type {};
+
+template <typename T>
+struct is_set<std::set<T>> : std::true_type {};
 
 #endif // SERIALIZE_BINARY_TYPE_TRAITS_H

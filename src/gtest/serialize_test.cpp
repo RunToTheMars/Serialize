@@ -97,6 +97,7 @@ TEST (serialize_test, make_save_load_identity_test)
       make_save_load_identity_test (m, "map_int_double.txt", current_dir);
     }
 
+    make_save_load_identity_test (std::set<char> {'s', 't', 'a'}, "set_char.txt", current_dir);
   }
 
   /// custom types

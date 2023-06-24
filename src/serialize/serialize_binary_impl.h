@@ -293,6 +293,62 @@ bool __read_binary (T &val, std::istream &is)
 }
 
 //-------------------------------------------------------------------------
+/// set
+///
+
+template<typename T, typename std::enable_if<is_set<T>::value, int>::type = 0>
+size_t __bytes_count (T &val)
+{
+  size_t res = 0;
+  size_t size = val.size ();
+
+  res += __bytes_count (size);
+
+  for (const auto &v: val)
+    res += __bytes_count (v);
+
+  return res;
+}
+
+template<typename T, typename std::enable_if<is_set<T>::value, int>::type = 0>
+bool __write_binary (T &val, std::ostream &os)
+{
+  size_t size = val.size ();
+  if (!__write_binary (size, os))
+    return false;
+
+  for (const auto &v: val)
+    {
+      if (!__write_binary (v, os))
+        return false;
+    }
+
+  return true;
+}
+
+template<typename T, typename std::enable_if<is_set<T>::value, int>::type = 0>
+bool __read_binary (T &val, std::istream &is)
+{
+  size_t size;
+  if (!__read_binary (size, is))
+    return false;
+
+  bool r = true;
+  for (size_t i = 0; i < size; i++)
+    {
+      typename T::key_type v;
+
+      bool has_error = __read_binary (v, is);
+      if (has_error)
+        r = false;
+
+      val.insert (v);
+    }
+
+  return r;
+}
+
+//-------------------------------------------------------------------------
 // supported struct
 //
 
