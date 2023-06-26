@@ -9,26 +9,29 @@
 #include <sstream>
 #include <algorithm>
 
-//struct __text_preffix
-//{
-//  static constexpr std::string one_space = "  ";
+struct __text_preffix
+{
+  std::string one_space = "  ";
 
-//  std::string space;
-//  int depth;
+  std::string space;
+  int depth;
 
-//  __text_preffix &increment ()
-//  {
-//    __text_preffix res;
-//    res.space = space + one_space;
-//    res.depth = depth + 1;
-//  }
+  __text_preffix &increment ()
+  {
+    space = space + one_space;
+    depth = depth + 1;
 
-//  __text_preffix &decrement ()
-//  {
-//    space = space.substr (0, space.size () - one_space.size ());
-//    depth --;
-//  }
-//};
+    return *this;
+  }
+
+  __text_preffix &decrement ()
+  {
+    space = space.substr (0, space.size () - one_space.size ());
+    depth --;
+
+    return *this;
+  }
+};
 
 //-------------------------------------------------------------------------
 /// boolean
@@ -47,7 +50,7 @@ size_t __lines_count (const T &/*val*/)
 }
 
 template<typename T, typename std::enable_if<text::is_boolean<T>::value, int>::type = 0>
-bool __write_text (const T &val, std::ostream &os)
+bool __write_text (const T &val, std::ostream &os, __text_preffix &/*preffix*/)
 {
   if (val)
     return (bool) (os << "true");
@@ -98,7 +101,7 @@ size_t __lines_count (const T &/*val*/)
 }
 
 template<typename T, typename std::enable_if<text::is_stream_supported<T>::value, int>::type = 0>
-bool __write_text (const T &val, std::ostream &os)
+bool __write_text (const T &val, std::ostream &os, __text_preffix &/*preffix*/)
 {
   return (bool) (os << val);
 }
@@ -126,28 +129,56 @@ size_t __lines_count (const T &/*val*/)
 }
 
 template<typename T, typename std::enable_if<text::is_string<T>::value, int>::type = 0>
-bool __write_text (const T &val, std::ostream &os)
+bool __write_text (const T &val, std::ostream &os, __text_preffix &/*preffix*/)
 {
   return (bool) (os << '\"' << val << '\"');
   return true;
 }
 
 template<typename T, typename std::enable_if<text::is_string<T>::value, int>::type = 0>
-bool __read_text (T &val, std::istream &is)
+bool __read_text_without_spaces (T &val, std::istream &is)
 {
-  T line_in_stream;
-  bool r = (bool) std::getline (is, line_in_stream);
+  bool r = (bool) std::getline (is, val);
   if (!r)
     return false;
 
-  if (line_in_stream.size () < 2)
-    return false;
+  int spaces = 0;
+  for (spaces = 0; spaces < val.size (); spaces++)
+    {
+      if (val[spaces] != ' ')
+        break;
+    }
 
-  if (   line_in_stream[0] != '\"'
-      && line_in_stream[line_in_stream.size () - 1] != '\"')
-    return false;
+  val = val.substr (spaces, val.size ());
+  return true;
+}
 
-  val = line_in_stream.substr (1, line_in_stream.size () - 1);
+template<typename T, typename std::enable_if<text::is_string<T>::value, int>::type = 0>
+bool __read_text (T &val, std::istream &is)
+{
+  char c;
+
+  do
+  {
+    bool r = (bool )is.read (&c, 1);
+    if (!r)
+      return false;
+  } while (c != '"');
+
+  val.clear ();
+
+  do
+  {
+    bool r = (bool )is.read (&c, 1);
+    if (!r)
+      return false;
+
+    if (c == '"')
+      return true;
+
+    val.push_back (c);
+  } while (1);
+
   return true;
 }
 
@@ -180,58 +211,113 @@ size_t __lines_count (const T &val)
 }
 
 template<typename T, typename std::enable_if<text::is_vector<T>::value, int>::type = 0>
-bool __write_text (const T &val, std::ostream &os)
-{
-  bool r_start = (bool) (os << "[" << "\n");
+bool __write_text (const T &val, std::ostream &os, __text_preffix &preffix)
+{ 
+  bool r_start = (bool) (os << "[" << '\n');
 
   bool r_values = true;
-  for (auto &v: val)
+  preffix.increment ();
+  for (int i = 0; i < val.size (); i++)
     {
-      if (!__write_text (v, os))
+      os << preffix.space;
+      if (!__write_text (val[i], os, preffix))
         r_values = false;
 
-      if (!text::is_vector<typename T::value_type>::value)
-        {
-          if (! (bool) (os << "\n"))
-            r_values = false;
-        }
-    }
+      if (i != val.size () - 1)
+        if (! (bool) (os << ","))
+          r_values = false;
 
-  bool r_end = (bool) (os << "]" << "\n");
+//      if (!text::is_vector<typename T::value_type>::value)
+//        {
+          if (! (bool) (os << '\n'))
+            r_values = false;
+//        }
+    }
+  preffix.decrement ();
+
+  bool r_end = (bool) (os << preffix.space << "]");
   return r_start && r_values && r_end;
 }
 
 template<typename T, typename std::enable_if<text::is_vector<T>::value, int>::type = 0>
 bool __read_text (T &val, std::istream &is)
 {
-  std::string line;
-  bool r_start = (bool) (is >> line);
+  char c;
 
-  if (!r_start || line != "[")
+  do
+  {
+    bool r = (bool )is.read (&c, 1);
+    if (!r)
+      return false;
+  } while (c == ' ');
+
+  if (c != '[')
     return false;
-
 
   while (true)
   {
-    line.clear ();
-    if (!__read_text (line, is))
-      return false;
-
-    if (line == "]")
-      return true;
-
-    std::stringstream ss;
-    ss << line;
     typename T::value_type v;
 
-    if (!__read_text (v, ss))
-      continue;
+    if (__read_text (v, is))
+      val.push_back (v);
 
-    val.push_back (v);
+    do
+    {
+      bool r = (bool )is.read (&c, 1);
+      if (!r)
+        return false;
+    } while (c == ' ');
+
+    if (c == ']')
+      return true;
   }
 
   return false;
 }
+
+//template<typename T, typename std::enable_if<text::is_vector<T>::value, int>::type = 0>
+//bool __read_text (T &val, std::istream &is)
+//{
+//  std::string line;
+
+//  if (!__read_text_without_spaces (line, is))
+//    return false;
+
+//  if (line != "[")
+//    return false;
+
+//  while (true)
+//  {
+//    line.clear ();
+
+//    int pos = is.tellg ();
+
+//    if (!__read_text_without_spaces (line, is))
+//      return false;
+
+//    if (line == "]")
+//      return true;
+
+//    if (line == "," || line == "\n")
+//      continue;
+
+//    char c;
+//    if (line == "")
+//      is.read (&c, 1);
+//    else
+//      is.seekg (pos, is.beg);
+
+//    typename T::value_type v;
+
+//    pos = is.tellg ();
+//    if (!__read_text (v, is))
+//      continue;
+
+//    val.push_back (v);
+//  }
+
+//  return false;
+//}
 
 //-------------------------------------------------------------------------
 
@@ -246,7 +332,8 @@ int write_text (T& val, const std::string &path)
     return -1;
 
   int r = 0;
-  __write_text (val, outfile);
+  __text_preffix preffix;
+  __write_text (val, outfile, preffix);
 
   outfile.close ();
   return r;
@@ -262,8 +349,22 @@ bool read_text (T& val, const std::string &path)
   if (!infile)
     return -1;
 
+  std::string preview;
+  infile.seekg (0, infile.end);
+  int size = infile.tellg ();
+  preview.resize (size);
+  infile.seekg (0, infile.beg);
+  infile.read (&preview[0], size);
+  infile.seekg (0, infile.beg);
+
+  std::stringstream ss;
+  std::erase (preview, '\n');
+//  std::erase (preview, ' ');
+
+  ss << preview;
+
   int r = 0;
-  __read_text (val, infile);
+  __read_text (val, ss);
 
   infile.close ();
   return r;
