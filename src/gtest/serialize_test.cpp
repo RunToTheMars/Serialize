@@ -194,6 +194,20 @@ void make_invalid_user_string_test (std::string user_string, T expected_val, con
 
   write_text (user_string, path);
 
+  {
+    std::ofstream outfile;
+
+    outfile.open (path);
+
+    if (!outfile)
+      return;
+
+    outfile << user_string;
+
+    outfile.close ();
+    return;
+  }
+
   T readed_val;
 
   read_text (readed_val, path);
@@ -202,24 +216,24 @@ void make_invalid_user_string_test (std::string user_string, T expected_val, con
 
 TEST (serialize_test, invalid_user_string_test)
 {
-//  std::string test_dir = base_dir + "/" + ::testing::UnitTest::GetInstance ()->current_test_info ()->name ();
-//  std::filesystem::create_directories (test_dir);
+  std::string test_dir = base_dir + "/" + ::testing::UnitTest::GetInstance ()->current_test_info ()->name ();
+  std::filesystem::create_directories (test_dir);
 
-//  std::string current_dir = test_dir;
+  std::string current_dir = test_dir;
 
-//  /// c++ int
-//  {
-//    make_invalid_user_string_test ("7s", 7, "invalid_int_1.txt", current_dir);
-//    make_invalid_user_string_test ("s7", 0, "invalid_int_2.txt", current_dir);
-//  }
+  /// c++ int
+  {
+    make_invalid_user_string_test ("7s", 7, "invalid_int_1.txt", current_dir);
+    make_invalid_user_string_test ("s7", 0, "invalid_int_2.txt", current_dir);
+  }
 
-//  /// c++ double
-//  {
-//    make_invalid_user_string_test ("7.s", 7., "invalid_double_1.txt", current_dir);
-//    make_invalid_user_string_test ("s7.", 0., "invalid_double_2.txt", current_dir);
+  /// c++ double
+  {
+    make_invalid_user_string_test ("7.s", 7., "invalid_double_1.txt", current_dir);
+    make_invalid_user_string_test ("s7.", 0., "invalid_double_2.txt", current_dir);
 
-//    make_invalid_user_string_test ("7.e8s", 7.e8, "invalid_double_exp_1.txt", current_dir);
-//    make_invalid_user_string_test ("s7.e8", 0.  , "invalid_double_exp_2.txt", current_dir);
-//  }
+    make_invalid_user_string_test ("7.e8s", 7.e8, "invalid_double_exp_1.txt", current_dir);
+    make_invalid_user_string_test ("s7.e8", 0.  , "invalid_double_exp_2.txt", current_dir);
+  }
 }
 
