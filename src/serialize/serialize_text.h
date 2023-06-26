@@ -9,6 +9,27 @@
 #include <sstream>
 #include <algorithm>
 
+//struct __text_preffix
+//{
+//  static constexpr std::string one_space = "  ";
+
+//  std::string space;
+//  int depth;
+
+//  __text_preffix &increment ()
+//  {
+//    __text_preffix res;
+//    res.space = space + one_space;
+//    res.depth = depth + 1;
+//  }
+
+//  __text_preffix &decrement ()
+//  {
+//    space = space.substr (0, space.size () - one_space.size ());
+//    depth --;
+//  }
+//};
+
 //-------------------------------------------------------------------------
 /// boolean
 ///
@@ -107,14 +128,27 @@ size_t __lines_count (const T &/*val*/)
 template<typename T, typename std::enable_if<text::is_string<T>::value, int>::type = 0>
 bool __write_text (const T &val, std::ostream &os)
 {
-  return (bool) (os << val);
+  return (bool) (os << '\"' << val << '\"');
   return true;
 }
 
 template<typename T, typename std::enable_if<text::is_string<T>::value, int>::type = 0>
 bool __read_text (T &val, std::istream &is)
 {
-  return (bool) std::getline (is, val);
+  T line_in_stream;
+  bool r = (bool) std::getline (is, line_in_stream);
+  if (!r)
+    return false;
+
+  if (line_in_stream.size () < 2)
+    return false;
+
+  if (   line_in_stream[0] != '\"'
+      && line_in_stream[line_in_stream.size () - 1] != '\"')
+    return false;
+
+  val = line_in_stream.substr (1, line_in_stream.size () - 1);
+  return true;
 }
 
 //-------------------------------------------------------------------------
