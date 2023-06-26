@@ -72,3 +72,9 @@ CMakeLists.txt.user*
 *.dll
 *.exe
 
+# VS Code
+*.vscode
+
+# Build
+*.build
+
