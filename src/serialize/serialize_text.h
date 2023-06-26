@@ -227,11 +227,8 @@ bool __write_text (const T &val, std::ostream &os, __text_preffix &preffix)
         if (! (bool) (os << ","))
           r_values = false;
 
-//      if (!text::is_vector<typename T::value_type>::value)
-//        {
-          if (! (bool) (os << '\n'))
-            r_values = false;
-//        }
+      if (! (bool) (os << '\n'))
+        r_values = false;
     }
   preffix.decrement ();
 
@@ -320,6 +317,87 @@ bool __read_text (T &val, std::istream &is)
 //}
 
 //-------------------------------------------------------------------------
+
+//-------------------------------------------------------------------------
+/// set
+///
+
+template<typename T, typename std::enable_if<text::is_set<T>::value, int>::type = 0>
+size_t __depth_count (const T &/*val*/)
+{
+  return 0;
+}
+
+template<typename T, typename std::enable_if<text::is_set<T>::value, int>::type = 0>
+size_t __lines_count (const T &/*val*/)
+{
+  return 0;
+}
+
+template<typename T, typename std::enable_if<text::is_set<T>::value, int>::type = 0>
+bool __write_text (const T &val, std::ostream &os, __text_preffix &preffix)
+{
+  bool r_start = (bool) (os << "[" << '\n');
+
+  bool r_values = true;
+  preffix.increment ();
+  int size = val.size ();
+  int i = 0;
+  for (const typename T::value_type &v: val)
+    {
+      os << preffix.space;
+      if (!__write_text (v, os, preffix))
+        r_values = false;
+
+      if (i != size - 1)
+        if (! (bool) (os << ","))
+          r_values = false;
+
+      if (! (bool) (os << '\n'))
+        r_values = false;
+      i ++;
+    }
+  preffix.decrement ();
+
+  bool r_end = (bool) (os << preffix.space << "]");
+  return r_start && r_values && r_end;
+}
+
+template<typename T, typename std::enable_if<text::is_set<T>::value, int>::type = 0>
+bool __read_text (T &val, std::istream &is)
+{
+  char c;
+
+  do
+  {
+    bool r = (bool )is.read (&c, 1);
+    if (!r)
+      return false;
+  } while (c == ' ');
+
+  if (c != '[')
+    return false;
+
+  while (true)
+  {
+    typename T::value_type v;
+
+    if (__read_text (v, is))
+      val.insert (v);
+
+    do
+    {
+      bool r = (bool )is.read (&c, 1);
+      if (!r)
+        return false;
+    } while (c == ' ');
+
+    if (c == ']')
+      return true;
+  }
+
+  return false;
+}
 
 template <typename T>
 int write_text (T& val, const std::string &path)

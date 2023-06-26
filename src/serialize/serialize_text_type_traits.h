@@ -59,6 +59,15 @@ struct is_vector : std::false_type {};
 
 template <typename T>
 struct is_vector<std::vector<T>> : std::true_type {};
+
+//-------------------------------------------------------------------------
+/// set
+///
+template <typename T>
+struct is_set : std::false_type {};
+
+template <typename T>
+struct is_set<std::set<T>> : std::true_type {};
 }
 
 #endif // SERIALIZE_TEXT_TYPE_TRAITS_H
