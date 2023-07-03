@@ -92,6 +92,8 @@ TEST (serialize_test, make_save_load_identity_test)
 
     make_save_load_identity_test_bin_text (std::string ("TEST WORD"),     "string.txt", current_dir);
     make_save_load_identity_test_bin_text (std::string ("Проверка") , "rus_string.txt", current_dir);
+
+    make_save_load_identity_test_bin_text (std::pair<int, char> (1, 'c'), "pair.txt", current_dir);
   }
 
   /// composite types
@@ -108,6 +110,13 @@ TEST (serialize_test, make_save_load_identity_test)
       std::vector<int> v2 = {4, 5, 6};
       std::vector<std::vector<int>> V = {v1, v2};
       make_save_load_identity_test_bin_text (V, "vec_vec_int.txt", current_dir);
+    }
+
+    {
+      std::vector<std::pair<int, std::string>> v;
+      v.emplace_back (0, "Cat");
+      v.emplace_back (1, "Dog");
+      make_save_load_identity_test_bin_text (v, "vec_pair_int_string.txt", current_dir);
     }
 
     {

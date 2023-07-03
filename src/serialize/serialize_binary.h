@@ -99,6 +99,29 @@ bool __read_binary (T &val, std::istream &is)
 }
 
 //-------------------------------------------------------------------------
+/// pair
+///
+
+template<typename T, typename std::enable_if<binary::is_pair<T>::value, int>::type = 0>
+size_t __bytes_count (const T &val)
+{
+  return __bytes_count (val.first) + __bytes_count (val.second);
+}
+
+template<typename T, typename std::enable_if<binary::is_pair<T>::value, int>::type = 0>
+bool __write_binary (const T &val, std::ostream &os)
+{
+  return __write_binary (val.first, os) && __write_binary (val.second, os);
+}
+
+template<typename T, typename std::enable_if<binary::is_pair<T>::value, int>::type = 0>
+bool __read_binary (T &val, std::istream &is)
+{
+  return __read_binary (val.first, is) && __read_binary (val.second, is);
+}
+
+
+//-------------------------------------------------------------------------
 /// Enum
 ///
 

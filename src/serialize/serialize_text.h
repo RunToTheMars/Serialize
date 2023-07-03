@@ -349,6 +349,88 @@ bool __read_setter (abstract_setter<T> &val, std::istream &is, __text_streamer &
   return false;
 }
 
+//-------------------------------------------------------------------------
+/// pair
+///
+
+template<typename T, typename std::enable_if<text::is_pair<T>::value, int>::type = 0>
+bool __write_text (T &val, std::ostream &os, __text_streamer &streamer)
+{
+  bool r_start = (bool) (os << streamer.cur_tab << streamer.settings.left_bracket);
+
+  bool r_values = true;
+
+  streamer.increment ();
+
+  os << streamer.cur_tab;
+  if (!__write_text (val.first, os, streamer))
+    r_values = false;
+  if (! (bool) (os << streamer.settings.postfix))
+    r_values = false;
+
+  os << streamer.cur_tab;
+  if (!__write_text (val.second, os, streamer))
+    r_values = false;
+  if (! (bool) (os << streamer.settings.last_postfix))
+    r_values = false;
+
+  streamer.decrement ();
+  bool r_end = (bool) (os << streamer.cur_tab << streamer.settings.right_bracket);
+  return r_start && r_values && r_end;
+}
+
+template<typename T, typename std::enable_if<text::is_pair<T>::value, int>::type = 0>
+bool __read_text (T &val, std::istream &is, __text_streamer &preffix)
+{
+  if (!__skip_tabs__ (is, preffix.settings.tab))
+    return false;
+
+  {
+    bool next_is_left_bracket;
+    if (!__skip_if_next_is__ (is, preffix.settings.left_bracket, next_is_left_bracket))
+      return false;
+
+    if (!next_is_left_bracket)
+      return false;
+  }
+
+  if (!__skip_tabs__ (is, preffix.settings.tab))
+    return false;
+  __read_text (val.first, is, preffix);
+  {
+    bool next_is_postfix;
+    if (!__skip_if_next_is__ (is, preffix.settings.postfix, next_is_postfix))
+      return false;
+
+    if (!next_is_postfix)
+      return false;
+  }
+
+  if (!__skip_tabs__ (is, preffix.settings.tab))
+    return false;
+  __read_text (val.second, is, preffix);
+  {
+    bool next_is_last_postfix;
+    if (!__skip_if_next_is__ (is, preffix.settings.last_postfix, next_is_last_postfix))
+      return false;
+
+    if (!next_is_last_postfix)
+      return false;
+  }
+
+  if (!__skip_tabs__ (is, preffix.settings.tab))
+    return false;
+  {
+    bool next_is_right_bracket;
+    if (!__skip_if_next_is__ (is,  preffix.settings.right_bracket, next_is_right_bracket))
+      return false;
+
+    if (!next_is_right_bracket)
+      return false;
+  }
+
+  return true;
+}
 
 //-------------------------------------------------------------------------
 /// vector
@@ -375,16 +457,35 @@ bool __read_text (T &val, std::istream &is, __text_streamer &preffix)
 template<typename T, typename std::enable_if<text::is_set<T>::value, int>::type = 0>
 bool __write_text (T &val, std::ostream &os, __text_streamer &streamer)
 {
-  std_getter<typename T::value_type, typename T::iterator> vector_getter (val.begin (), val.end ());
-  return __write_getter (vector_getter, os, streamer);
+  std_getter<typename T::value_type, typename T::iterator> set_getter (val.begin (), val.end ());
+  return __write_getter (set_getter, os, streamer);
 }
 
 template<typename T, typename std::enable_if<text::is_set<T>::value, int>::type = 0>
 bool __read_text (T &val, std::istream &is, __text_streamer &preffix)
 {
-  std_insert<typename T::value_type, T> set_getter (val);
-  return __read_setter (set_getter, is, preffix);
+  std_insert<typename T::value_type, T> set_setter (val);
+  return __read_setter (set_setter, is, preffix);
 }
+
+//-------------------------------------------------------------------------
+/// map
+///
+
+template<typename T, typename std::enable_if<text::is_map<T>::value, int>::type = 0>
+bool __write_text (T &val, std::ostream &os, __text_streamer &streamer)
+{
+  std_getter<typename T::value_type, typename T::iterator> map_getter (val.begin (), val.end ());
+  return __write_getter (map_getter, os, streamer);
+}
+
+template<typename T, typename std::enable_if<text::is_map<T>::value, int>::type = 0>
+bool __read_text (T &val, std::istream &is, __text_streamer &preffix)
+{
+  std_insert<typename T::value_type, T> map_setter (val);
+  return __read_setter (map_setter, is, preffix);
+}
+
 
 //-------------------------------------------------------------------------
 // supported struct

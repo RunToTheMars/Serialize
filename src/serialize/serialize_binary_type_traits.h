@@ -52,6 +52,15 @@ template <>
 struct is_string<std::string> : std::true_type {};
 
 //-------------------------------------------------------------------------
+/// pair
+///
+template <typename T>
+struct is_pair : std::false_type {};
+
+template <typename T1, typename T2>
+struct is_pair<std::pair<T1, T2>> : std::true_type {};
+
+//-------------------------------------------------------------------------
 /// vector
 ///
 template <typename T>
