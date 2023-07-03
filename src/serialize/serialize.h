@@ -7,7 +7,6 @@
 enum class format_t
 {
   binary,
-  text
 };
 
 template <typename T>

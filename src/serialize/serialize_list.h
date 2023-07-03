@@ -8,6 +8,40 @@
 #include <map>
 #include <memory>
 
+struct __text_serialize_settings
+{
+  std::string postfix = ", ";
+  std::string last_postfix = "";
+  std::string tab = "";
+  std::string left_bracket = "[";
+  std::string right_bracket = "]";
+};
+
+struct __text_streamer
+{
+  __text_serialize_settings settings;
+
+  std::string cur_tab;
+  int depth;
+
+  __text_streamer &increment ()
+  {
+    cur_tab = cur_tab + settings.tab;
+    depth = depth + 1;
+
+    return *this;
+  }
+
+  __text_streamer &decrement ()
+  {
+    cur_tab = cur_tab.substr (0, cur_tab.size () - settings.tab.size ());
+    depth --;
+
+    return *this;
+  }
+};
+
+
 class abstract_parameter
 {
 public:
@@ -15,6 +49,10 @@ public:
 
   virtual int write_binary (std::ostream &os) = 0;
   virtual int read_binary (std::istream &is) = 0;
+
+  virtual int write_text (std::ostream &os, __text_streamer &streamer) = 0;
+  virtual int read_text (std::istream &is, __text_streamer &streamer) = 0;
+
   virtual size_t bytes_count () = 0;
 };
 
@@ -31,6 +69,10 @@ public:
 
   int write_binary (std::ostream &os) override;
   int read_binary (std::istream &is) override;
+
+  int write_text (std::ostream &os, __text_streamer &streamer) override;
+  int read_text (std::istream &is, __text_streamer &streamer) override;
+
   size_t bytes_count () override;
 };
 

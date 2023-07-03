@@ -9,48 +9,71 @@
 #include <sstream>
 #include <algorithm>
 
-struct __text_preffix
+inline bool __move_right (std::istream &is, std::string &str, size_t bytes)
 {
-  std::string one_space = "  ";
+  str.resize (bytes);
+  return (bool) is.read (&str[0], bytes);
+}
 
-  std::string space;
-  int depth;
+inline bool __move_left (std::istream &is, size_t bytes)
+{
+  std::istream::pos_type pos = is.tellg () ;
+  pos -= std::streamoff (bytes);
+  return (bool) is.seekg (pos);
+}
 
-  __text_preffix &increment ()
-  {
-    space = space + one_space;
-    depth = depth + 1;
+inline bool __skip_tabs__ (std::istream &is, std::string tab)
+{
+  if (tab.empty ())
+    return true;
 
-    return *this;
-  }
+  std::string buf;
+  while (true)
+    {
+      if (!__move_right (is, buf, tab.size ()))
+        return false;
 
-  __text_preffix &decrement ()
-  {
-    space = space.substr (0, space.size () - one_space.size ());
-    depth --;
+      if (buf != tab)
+        {
+          return __move_left (is, tab.size ());
+        }
 
-    return *this;
-  }
-};
+    }
+
+  return true;
+}
+
+inline bool __skip_if_next_is__ (std::istream &is, std::string str, bool &eq)
+{
+  eq = false;
+  std::string buf;
+
+  if (!__move_right (is, buf, str.size ()))
+    return false;
+
+  if (str == buf)
+    {
+      eq = true;
+      return true;
+    }
+
+  return __move_left (is, str.size ());
+}
 
 //-------------------------------------------------------------------------
 /// boolean
 ///
 
-template<typename T, typename std::enable_if<text::is_boolean<T>::value, int>::type = 0>
-size_t __depth_count (const T &/*val*/)
-{
-  return 1;
-}
+/// Example.txt:
+///>true
+///>false
+///>no
+///>yes
+///>0
+///>1
 
 template<typename T, typename std::enable_if<text::is_boolean<T>::value, int>::type = 0>
-size_t __lines_count (const T &/*val*/)
-{
-  return 1;
-}
-
-template<typename T, typename std::enable_if<text::is_boolean<T>::value, int>::type = 0>
-bool __write_text (const T &val, std::ostream &os, __text_preffix &/*preffix*/)
+bool __write_text (T &val, std::ostream &os, __text_streamer &/*streamer*/)
 {
   if (val)
     return (bool) (os << "true");
@@ -61,7 +84,7 @@ bool __write_text (const T &val, std::ostream &os, __text_preffix &/*preffix*/)
 }
 
 template<typename T, typename std::enable_if<text::is_boolean<T>::value, int>::type = 0>
-bool __read_text (T &val, std::istream &is)
+bool __read_text (T &val, std::istream &is, __text_streamer &/*streamer*/)
 {
   std::string line;
   bool r = (bool) (is >> line);
@@ -88,26 +111,19 @@ bool __read_text (T &val, std::istream &is)
 /// stream_supported
 ///
 
-template<typename T, typename std::enable_if<text::is_stream_supported<T>::value, int>::type = 0>
-size_t __depth_count (const T &/*val*/)
-{
-  return 1;
-}
+/// Example.txt:
+///>1e-5
+///>c
+///>15
 
 template<typename T, typename std::enable_if<text::is_stream_supported<T>::value, int>::type = 0>
-size_t __lines_count (const T &/*val*/)
-{
-  return 1;
-}
-
-template<typename T, typename std::enable_if<text::is_stream_supported<T>::value, int>::type = 0>
-bool __write_text (const T &val, std::ostream &os, __text_preffix &/*preffix*/)
+bool __write_text (T &val, std::ostream &os, __text_streamer &/*preffix*/)
 {
   return (bool) (os << val);
 }
 
 template<typename T, typename std::enable_if<text::is_stream_supported<T>::value, int>::type = 0>
-bool __read_text (T &val, std::istream &is)
+bool __read_text (T &val, std::istream &is, __text_streamer &/*preffix*/)
 {
   return (bool) (is >> val);
 }
@@ -116,61 +132,32 @@ bool __read_text (T &val, std::istream &is)
 /// string
 ///
 
-template<typename T, typename std::enable_if<text::is_string<T>::value, int>::type = 0>
-size_t __depth_count (const T &/*val*/)
-{
-  return 1;
-}
+/// Example.txt:
+///>"C++"
 
 template<typename T, typename std::enable_if<text::is_string<T>::value, int>::type = 0>
-size_t __lines_count (const T &/*val*/)
-{
-  return 1;
-}
-
-template<typename T, typename std::enable_if<text::is_string<T>::value, int>::type = 0>
-bool __write_text (const T &val, std::ostream &os, __text_preffix &/*preffix*/)
+bool __write_text (T &val, std::ostream &os, __text_streamer &/*streamer*/)
 {
   return (bool) (os << '\"' << val << '\"');
   return true;
 }
 
 template<typename T, typename std::enable_if<text::is_string<T>::value, int>::type = 0>
-bool __read_text_without_spaces (T &val, std::istream &is)
-{
-  bool r = (bool) std::getline (is, val);
-  if (!r)
-    return false;
-
-  int spaces = 0;
-  for (spaces = 0; spaces < val.size (); spaces++)
-    {
-      if (val[spaces] != ' ')
-        break;
-    }
-
-  val = val.substr (spaces, val.size ());
-  return true;
-}
-
-template<typename T, typename std::enable_if<text::is_string<T>::value, int>::type = 0>
-bool __read_text (T &val, std::istream &is)
+bool __read_text (T &val, std::istream &is, __text_streamer &/*streamer*/)
 {
   char c;
 
-  do
-  {
-    bool r = (bool )is.read (&c, 1);
-    if (!r)
-      return false;
-  } while (c != '"');
+  if (!is.read (&c, 1))
+    return false;
+
+  if (c != '"')
+    return false;
 
   val.clear ();
 
   do
   {
-    bool r = (bool )is.read (&c, 1);
-    if (!r)
+    if (!is.read (&c, 1))
       return false;
 
     if (c == '"')
@@ -183,224 +170,311 @@ bool __read_text (T &val, std::istream &is)
 }
 
 //-------------------------------------------------------------------------
-/// vector
+/// abstract_getter
 ///
 
-template<typename T, typename std::enable_if<text::is_vector<T>::value, int>::type = 0>
-size_t __depth_count (const T &val)
+/// Example.txt:
+///><TAB>     ...<TAB><LEFT_BRACKET>
+///><TAB><TAB>...<TAB>"C++"<POSTFIX>
+///><TAB><TAB>...<TAB>"is Best"<LAST_POSTFIX>
+///><TAB>     ...<TAB><RIGHT_BRACKET>
+
+template <typename T>
+class abstract_getter
 {
-  size_t r = 0;
-  for (auto &v: val)
-    {
-      size_t d = __depth_count (v);
-      if (d > r)
-        r = d;
-    }
+public:
+  virtual ~abstract_getter () = default;
 
-  return r + 1;
-}
+  virtual bool is_end () const = 0;
+  virtual T &get_value () const = 0;
+  virtual void next () = 0;
+};
 
-template<typename T, typename std::enable_if<text::is_vector<T>::value, int>::type = 0>
-size_t __lines_count (const T &val)
+template <typename T, typename Iter>
+class std_getter: public abstract_getter<T>
 {
-  size_t r = 2;
-  for (auto &v: val)
-    r += __lines_count (v);
+  Iter m_start;
+  Iter m_end;
 
-  return r;
-}
+public:
+  std_getter (Iter start, Iter end)
+  {
+    m_start = start;
+    m_end = end;
+  }
 
-template<typename T, typename std::enable_if<text::is_vector<T>::value, int>::type = 0>
-bool __write_text (const T &val, std::ostream &os, __text_preffix &preffix)
-{ 
-  bool r_start = (bool) (os << "[" << '\n');
+  bool is_end () const override
+  {
+    return m_start == m_end;
+  }
+
+  T &get_value () const override
+  {
+    return const_cast <T &> (*m_start);
+  }
+
+  void next () override
+  {
+    m_start++;
+  }
+};
+
+template <typename T>
+bool __write_getter (abstract_getter<T> &getter, std::ostream &os, __text_streamer &streamer)
+{
+  bool r_start = (bool) (os << streamer.cur_tab << streamer.settings.left_bracket);
 
   bool r_values = true;
-  preffix.increment ();
-  for (int i = 0; i < val.size (); i++)
+
+  if (!getter.is_end ())
     {
-      os << preffix.space;
-      if (!__write_text (val[i], os, preffix))
-        r_values = false;
+      streamer.increment ();
+      for (;;)
+        {
+          os << streamer.cur_tab;
+          if (!__write_text (getter.get_value (), os, streamer))
+            r_values = false;
 
-      if (i != val.size () - 1)
-        if (! (bool) (os << ","))
-          r_values = false;
+          getter.next ();
+          if (!getter.is_end ())
+            {
+              if (! (bool) (os << streamer.settings.postfix))
+                r_values = false;
+            }
+          else
+            {
+              if (! (bool) (os << streamer.settings.last_postfix))
+                r_values = false;
 
-      if (! (bool) (os << '\n'))
-        r_values = false;
+              break;
+            }
+        }
+      streamer.decrement ();
     }
-  preffix.decrement ();
 
-  bool r_end = (bool) (os << preffix.space << "]");
+  bool r_end = (bool) (os << streamer.cur_tab << streamer.settings.right_bracket);
   return r_start && r_values && r_end;
 }
 
-template<typename T, typename std::enable_if<text::is_vector<T>::value, int>::type = 0>
-bool __read_text (T &val, std::istream &is)
+template <typename T>
+class abstract_setter
 {
-  char c;
+public:
+  virtual ~abstract_setter () = default;
 
-  do
+  virtual void add (T &&val) = 0;
+};
+
+template <typename T, typename C>
+class std_push_back: public abstract_setter<T>
+{
+  C &m_container;
+
+public:
+  std_push_back (C &container): m_container (container) { }
+
+  void add (T &&val) override
   {
-    bool r = (bool )is.read (&c, 1);
-    if (!r)
-      return false;
-  } while (c == ' ');
+    m_container.push_back (std::move (val));
+  }
+};
 
-  if (c != '[')
+template <typename T, typename C>
+class std_insert: public abstract_setter<T>
+{
+  C &m_container;
+
+public:
+  std_insert (C &container): m_container (container) { }
+
+  void add (T &&val) override
+  {
+    m_container.insert (std::move (val));
+  }
+};
+
+template<typename T>
+bool __read_setter (abstract_setter<T> &val, std::istream &is, __text_streamer &preffix)
+{
+  if (!__skip_tabs__ (is, preffix.settings.tab))
     return false;
+
+  {
+    bool next_is_left_bracket;
+    if (!__skip_if_next_is__ (is, preffix.settings.left_bracket, next_is_left_bracket))
+      return false;
+
+    if (!next_is_left_bracket)
+      return false;
+  }
 
   while (true)
   {
-    typename T::value_type v;
+    T v;
 
-    if (__read_text (v, is))
-      val.push_back (v);
+    if (!__skip_tabs__ (is, preffix.settings.tab))
+      return false;
 
-    do
     {
-      bool r = (bool )is.read (&c, 1);
-      if (!r)
+      bool next_is_right_bracket;
+      if (!__skip_if_next_is__ (is,  preffix.settings.right_bracket, next_is_right_bracket))
         return false;
-    } while (c == ' ');
 
-    if (c == ']')
-      return true;
+      if (next_is_right_bracket)
+        return true;
+    }
+
+    if (__read_text (v, is, preffix))
+      val.add (std::move (v));
+
+    {
+      bool next_is_postfix;
+      if (!__skip_if_next_is__ (is, preffix.settings.postfix, next_is_postfix))
+        return false;
+
+      if (next_is_postfix)
+        continue;
+    }
+
+    {
+      bool next_is_last_postfix;
+      if (!__skip_if_next_is__ (is, preffix.settings.last_postfix, next_is_last_postfix))
+        return false;
+
+      if (!next_is_last_postfix)
+        return false;
+    }
   }
 
   return false;
 }
 
-//template<typename T, typename std::enable_if<text::is_vector<T>::value, int>::type = 0>
-//bool __read_text (T &val, std::istream &is)
-//{
-//  std::string line;
-
-//  if (!__read_text_without_spaces (line, is))
-//    return false;
-
-//  if (line != "[")
-//    return false;
-
-//  while (true)
-//  {
-//    line.clear ();
-
-//    int pos = is.tellg ();
-
-//    if (!__read_text_without_spaces (line, is))
-//      return false;
-
-//    if (line == "]")
-//      return true;
-
-//    if (line == "," || line == "\n")
-//      continue;
-
-//    char c;
-//    if (line == "")
-//      is.read (&c, 1);
-//    else
-//      is.seekg (pos, is.beg);
-
-//    typename T::value_type v;
-
-//    pos = is.tellg ();
-//    if (!__read_text (v, is))
-//      continue;
-
-//    val.push_back (v);
-//  }
-
-//  return false;
-//}
 
 //-------------------------------------------------------------------------
+/// vector
+///
+
+template<typename T, typename std::enable_if<text::is_vector<T>::value, int>::type = 0>
+bool __write_text (T &val, std::ostream &os, __text_streamer &streamer)
+{ 
+  std_getter<typename T::value_type, typename T::iterator> vector_getter (val.begin (), val.end ());
+  return __write_getter (vector_getter, os, streamer);
+}
+
+template<typename T, typename std::enable_if<text::is_vector<T>::value, int>::type = 0>
+bool __read_text (T &val, std::istream &is, __text_streamer &preffix)
+{
+  std_push_back<typename T::value_type, T> vector_getter (val);
+  return __read_setter (vector_getter, is, preffix);
+}
 
 //-------------------------------------------------------------------------
 /// set
 ///
 
 template<typename T, typename std::enable_if<text::is_set<T>::value, int>::type = 0>
-size_t __depth_count (const T &/*val*/)
+bool __write_text (T &val, std::ostream &os, __text_streamer &streamer)
 {
+  std_getter<typename T::value_type, typename T::iterator> vector_getter (val.begin (), val.end ());
+  return __write_getter (vector_getter, os, streamer);
+}
+
+template<typename T, typename std::enable_if<text::is_set<T>::value, int>::type = 0>
+bool __read_text (T &val, std::istream &is, __text_streamer &preffix)
+{
+  std_insert<typename T::value_type, T> set_getter (val);
+  return __read_setter (set_getter, is, preffix);
+}
+
+//-------------------------------------------------------------------------
+// supported struct
+//
+
+template <typename T>
+int value_parameter<T>::write_text (std::ostream &/*os*/, __text_streamer &/*streamer*/)
+{
+//  return __write_text (m_val, os, prefix);
   return 0;
-}
-
-template<typename T, typename std::enable_if<text::is_set<T>::value, int>::type = 0>
-size_t __lines_count (const T &/*val*/)
-{
-  return 0;
-}
-
-template<typename T, typename std::enable_if<text::is_set<T>::value, int>::type = 0>
-bool __write_text (const T &val, std::ostream &os, __text_preffix &preffix)
-{
-  bool r_start = (bool) (os << "[" << '\n');
-
-  bool r_values = true;
-  preffix.increment ();
-  int size = val.size ();
-  int i = 0;
-  for (const typename T::value_type &v: val)
-    {
-      os << preffix.space;
-      if (!__write_text (v, os, preffix))
-        r_values = false;
-
-      if (i != size - 1)
-        if (! (bool) (os << ","))
-          r_values = false;
-
-      if (! (bool) (os << '\n'))
-        r_values = false;
-      i ++;
-    }
-  preffix.decrement ();
-
-  bool r_end = (bool) (os << preffix.space << "]");
-  return r_start && r_values && r_end;
-}
-
-template<typename T, typename std::enable_if<text::is_set<T>::value, int>::type = 0>
-bool __read_text (T &val, std::istream &is)
-{
-  char c;
-
-  do
-  {
-    bool r = (bool )is.read (&c, 1);
-    if (!r)
-      return false;
-  } while (c == ' ');
-
-  if (c != '[')
-    return false;
-
-  while (true)
-  {
-    typename T::value_type v;
-
-    if (__read_text (v, is))
-      val.insert (v);
-
-    do
-    {
-      bool r = (bool )is.read (&c, 1);
-      if (!r)
-        return false;
-    } while (c == ' ');
-
-    if (c == ']')
-      return true;
-  }
-
-  return false;
 }
 
 template <typename T>
-int write_text (T& val, const std::string &path)
+int value_parameter<T>::read_text (std::istream &/*is*/, __text_streamer &/*streamer*/)
+{
+//  int r = __read_text (m_val, is);
+//  if (m_do_after_read)
+//    m_do_after_read ();
+//  return r;
+    return 0;
+}
+
+//template<typename T>
+//requires requires (T val, serialize_list pl) { val.build_parameter_list (pl); }
+//size_t __depth_count (T &/*val*/)
+//{
+//  return 0;
+//}
+
+//template<typename T>
+//requires requires (T val, serialize_list pl) { val.build_parameter_list (pl); }
+//size_t __lines_count (T &/*val*/)
+//{
+//  return 0;
+//}
+
+//template<typename T>
+//requires requires (T val, serialize_list pl) { val.build_parameter_list (pl); }
+//bool __write_text (T &val, std::ostream &os, __text_streamer &preffix)
+//{
+//  serialize_list pl;
+//  val.build_parameter_list (pl);
+
+//  for (auto &[name, param]: pl.get_list ())
+//    {
+//      std::string &name_test = name;
+//      __write_text (name_test, os, preffix);
+//      os << ':';
+//      int r = param->write_text (os, preffix);
+//      if (r < 0)
+//        return false;
+//    }
+
+//  return true;
+//}
+
+//template<typename T>
+//requires requires (T val, serialize_list pl) { val.build_parameter_list (pl); }
+//bool __read_text (T &val, std::istream &is)
+//{
+//  serialize_list pl;
+//  val.build_parameter_list (pl);
+
+//  for (auto &[name, param]: pl.get_list ())
+//    {
+//      std::string name_in_stream;
+//      bool r = __read_text (name_in_stream, is);
+//      if (!r)
+//        return false;
+
+//      char c;
+//      r = (bool )is.read (&c, 1);
+//      if (!r)
+//        return false;
+
+//      if (c != ':')
+//        return false;
+
+//      param->read_text (is);
+//    }
+
+//  pl.do_after_read ();
+
+//  return true;
+//}
+
+//-------------------------------------------------------------------------
+
+template <typename T>
+int write_text (T& val, std::string &path)
 {
   std::ofstream outfile;
 
@@ -410,15 +484,15 @@ int write_text (T& val, const std::string &path)
     return -1;
 
   int r = 0;
-  __text_preffix preffix;
-  __write_text (val, outfile, preffix);
+  __text_streamer streamer;
+  __write_text (val, outfile, streamer);
 
   outfile.close ();
   return r;
 }
 
 template <typename T>
-bool read_text (T& val, const std::string &path)
+bool read_text (T& val, std::string &path)
 {
   std::ifstream infile;
 
@@ -427,37 +501,12 @@ bool read_text (T& val, const std::string &path)
   if (!infile)
     return -1;
 
-  std::string preview;
-  infile.seekg (0, infile.end);
-  int size = infile.tellg ();
-  preview.resize (size);
-  infile.seekg (0, infile.beg);
-  infile.read (&preview[0], size);
-  infile.seekg (0, infile.beg);
-
-  std::stringstream ss;
-  std::erase (preview, '\n');
-//  std::erase (preview, ' ');
-
-  ss << preview;
-
   int r = 0;
-  __read_text (val, ss);
+  __text_streamer streamer;
+  __read_text (val, infile, streamer);
 
   infile.close ();
   return r;
-}
-
-template <typename T>
-size_t depth_count (T& val)
-{
-  return __depth_count (val);
-}
-
-template <typename T>
-size_t lines_count (T& val)
-{
-  return __lines_count (val);
 }
 
 #endif
